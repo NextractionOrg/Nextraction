@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  nextraction-api:
+    build: .
+    container_name: nextraction-api
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+      - EMBEDDING_PROVIDER=${EMBEDDING_PROVIDER:-openai}
+      - LLM_PROVIDER=${LLM_PROVIDER:-openai}
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+    volumes:
+      - ./data:/app/data
+      - ./.env:/app/.env
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
