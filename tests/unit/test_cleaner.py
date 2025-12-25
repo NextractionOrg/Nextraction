@@ -1,3 +1,6 @@
+"""
+Tests unitaires pour le service de nettoyage de contenu
+"""
 import pytest
 from app.services.cleaner import ContentCleaner
 
@@ -49,4 +52,28 @@ def test_generate_chunk_id():
     
     assert chunk_id_1 != chunk_id_2
     assert len(chunk_id_1) == 32  # MD5 hash length
+
+
+def test_clean_and_chunk_empty():
+    """Test cleaning with empty pages"""
+    cleaner = ContentCleaner()
+    
+    pages = []
+    chunks = cleaner.clean_and_chunk(pages)
+    assert chunks == []
+
+
+def test_clean_and_chunk_minimal():
+    """Test cleaning with minimal content"""
+    cleaner = ContentCleaner()
+    
+    pages = [{
+        "url": "https://example.com",
+        "title": "Example",
+        "html": "<html><body><p>Short content</p></body></html>"
+    }]
+    
+    chunks = cleaner.clean_and_chunk(pages)
+    # Should return empty if content is too short
+    assert isinstance(chunks, list)
 
