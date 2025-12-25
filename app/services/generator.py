@@ -21,23 +21,35 @@ class GroundedGenerator:
             try:
                 from openai import AsyncOpenAI
                 api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
+                if not api_key:
+                    logger.warning("No OpenAI API key found. LLM calls will fail.")
+                    logger.warning("Set OPENAI_API_KEY environment variable or configure in .env")
+                    self._client = None
+                    return
                 base_url = settings.openai_base_url or None
                 self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
                 logger.info("Initialized OpenAI LLM client")
             except ImportError:
                 logger.error("OpenAI library not installed")
-                raise RuntimeError("OpenAI client not available")
+                self._client = None
+            except Exception as e:
+                logger.error(f"Failed to initialize OpenAI client: {str(e)}")
+                self._client = None
         
         elif self.llm_provider == "gemini":
             try:
                 import google.generativeai as genai
                 api_key = settings.gemini_api_key or os.getenv("GEMINI_API_KEY")
-                genai.configure(api_key=api_key)
-                self._client = genai
-                logger.info("Initialized Gemini LLM client")
+                if not api_key:
+                    logger.warning("No Gemini API key found. LLM calls will fail.")
+                    self._client = None
+                else:
+                    genai.configure(api_key=api_key)
+                    self._client = genai
+                    logger.info("Initialized Gemini LLM client")
             except ImportError:
                 logger.error("Gemini library not installed")
-                raise RuntimeError("Gemini client not available")
+                self._client = None
     
     def _build_context(self, retrieved_chunks: List[Tuple[Dict, float]]) -> str:
         """Build context string from retrieved chunks"""
@@ -134,27 +146,39 @@ Answer (with citations in [ChunkID: ...] format):"""
     async def _call_llm(self, prompt: str) -> str:
         """Call the LLM to generate an answer"""
         if self.llm_provider == "openai":
-            response = await self._client.chat.completions.create(
-                model=self.llm_model,
-                messages=[
-                    {"role": "system", "content": "You are a helpful assistant that provides evidence-based answers with citations."},
-                    {"role": "user", "content": prompt}
-                ],
-                temperature=settings.llm_temperature,
-                max_tokens=settings.llm_max_tokens
-            )
-            return response.choices[0].message.content.strip()
+            if not self._client:
+                raise RuntimeError("OpenAI client not initialized. Check OPENAI_API_KEY.")
+            try:
+                response = await self._client.chat.completions.create(
+                    model=self.llm_model,
+                    messages=[
+                        {"role": "system", "content": "You are a helpful assistant that provides evidence-based answers with citations."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    temperature=settings.llm_temperature,
+                    max_tokens=settings.llm_max_tokens
+                )
+                return response.choices[0].message.content.strip()
+            except Exception as e:
+                logger.error(f"OpenAI API error: {str(e)}")
+                raise RuntimeError(f"Failed to call OpenAI API: {str(e)}")
         
         elif self.llm_provider == "gemini":
-            model = self._client.GenerativeModel(self.llm_model)
-            response = await model.generate_content_async(
-                prompt,
-                generation_config={
-                    "temperature": settings.llm_temperature,
-                    "max_output_tokens": settings.llm_max_tokens
-                }
-            )
-            return response.text.strip()
+            if not self._client:
+                raise RuntimeError("Gemini client not initialized. Check GEMINI_API_KEY.")
+            try:
+                model = self._client.GenerativeModel(self.llm_model)
+                response = await model.generate_content_async(
+                    prompt,
+                    generation_config={
+                        "temperature": settings.llm_temperature,
+                        "max_output_tokens": settings.llm_max_tokens
+                    }
+                )
+                return response.text.strip()
+            except Exception as e:
+                logger.error(f"Gemini API error: {str(e)}")
+                raise RuntimeError(f"Failed to call Gemini API: {str(e)}")
     
     def _extract_citations(self, answer: str, chunks: List[Tuple[Dict, float]]) -> List[Dict]:
         """Extract citations from the answer text"""
