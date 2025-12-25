@@ -18,8 +18,13 @@ numpy==1.26.4
 # Embeddings (choose one or more)
 openai==1.54.3
 # google-generativeai==0.8.0  # Uncomment if using Gemini
-# sentence-transformers==2.7.0  # Uncomment if using local embeddings
+sentence-transformers>=2.7.0  # For local embeddings (no API key needed)
 
 # Utilities
 python-multipart==0.0.9
+
+# Authentication
+PyJWT==2.8.0
+cryptography==42.0.5
+email-validator==2.1.1
 

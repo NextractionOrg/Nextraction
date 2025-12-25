@@ -55,6 +55,9 @@ Thumbs.db
 .coverage
 htmlcov/
 
-# Markdown files
+# Markdown files (except README.md, STRUCTURE.md, and docs/)
 *.md
+!README.md
+!STRUCTURE.md
+!docs/**/*.md
 

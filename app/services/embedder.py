@@ -21,9 +21,13 @@ class EmbeddingService:
             try:
                 from openai import AsyncOpenAI
                 api_key = settings.openai_api_key or os.getenv("OPENAI_API_KEY")
-                base_url = settings.openai_base_url or None
-                self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
-                logger.info("Initialized OpenAI embedding client")
+                if not api_key:
+                    logger.warning("No OpenAI API key found, falling back to local")
+                    self.embedding_provider = "local"
+                else:
+                    base_url = settings.openai_base_url or None
+                    self._client = AsyncOpenAI(api_key=api_key, base_url=base_url)
+                    logger.info("Initialized OpenAI embedding client")
             except ImportError:
                 logger.warning("OpenAI library not installed, falling back to local")
                 self.embedding_provider = "local"
@@ -40,16 +44,20 @@ class EmbeddingService:
                 self.embedding_provider = "local"
         
         if self.embedding_provider == "local":
-            try:
-                from sentence_transformers import SentenceTransformer
-                # Use a lightweight model
-                model_name = "all-MiniLM-L6-v2"  # 384 dimensions
-                self._client = SentenceTransformer(model_name)
-                self.dimension = 384  # Override for this model
-                logger.info(f"Initialized local embedding model: {model_name}")
-            except ImportError:
-                logger.error("No embedding provider available. Install openai, google-generativeai, or sentence-transformers")
-                raise RuntimeError("No embedding provider available")
+            self._initialize_local_embedding()
+    
+    def _initialize_local_embedding(self):
+        """Initialize local embedding model"""
+        try:
+            from sentence_transformers import SentenceTransformer
+            # Use a lightweight model
+            model_name = "all-MiniLM-L6-v2"  # 384 dimensions
+            self._client = SentenceTransformer(model_name)
+            self.dimension = 384  # Override for this model
+            logger.info(f"Initialized local embedding model: {model_name}")
+        except ImportError:
+            logger.error("No embedding provider available. Install sentence-transformers for local embeddings")
+            raise RuntimeError("No embedding provider available. Install sentence-transformers: pip install sentence-transformers")
     
     async def embed_texts(self, texts: List[str]) -> np.ndarray:
         """Generate embeddings for a list of texts"""
@@ -67,12 +75,26 @@ class EmbeddingService:
     
     async def _embed_openai(self, texts: List[str]) -> np.ndarray:
         """Generate embeddings using OpenAI"""
-        response = await self._client.embeddings.create(
-            model=self.model,
-            input=texts
-        )
-        embeddings = [item.embedding for item in response.data]
-        return np.array(embeddings)
+        try:
+            response = await self._client.embeddings.create(
+                model=self.model,
+                input=texts
+            )
+            embeddings = [item.embedding for item in response.data]
+            return np.array(embeddings)
+        except Exception as e:
+            error_str = str(e).lower()
+            # Check for quota/rate limit errors
+            if "429" in error_str or "insufficient_quota" in error_str or "rate_limit" in error_str:
+                logger.warning(f"OpenAI quota/rate limit exceeded: {str(e)}. Falling back to local embeddings.")
+                # Switch to local embeddings
+                self.embedding_provider = "local"
+                self._initialize_local_embedding()
+                return self._embed_local(texts)
+            else:
+                # Re-raise other errors
+                logger.error(f"OpenAI embedding error: {str(e)}")
+                raise
     
     async def _embed_gemini(self, texts: List[str]) -> np.ndarray:
         """Generate embeddings using Gemini"""

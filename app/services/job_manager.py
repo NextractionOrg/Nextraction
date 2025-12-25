@@ -15,7 +15,17 @@ class JobManager:
     
     def __init__(self):
         self.jobs: Dict[str, Dict] = {}
-        self.embedding_service = EmbeddingService()
+        self.embedding_service = None  # Lazy initialization
+    
+    def _get_embedding_service(self):
+        """Lazy initialization of embedding service"""
+        if self.embedding_service is None:
+            try:
+                self.embedding_service = EmbeddingService()
+            except Exception as e:
+                logger.error(f"Failed to initialize embedding service: {str(e)}")
+                raise
+        return self.embedding_service
     
     def create_job(
         self,
@@ -78,7 +88,7 @@ class JobManager:
                     max_depth=job["max_depth"]
                 )
             
-            self.update_job_state(job_id, pages_fetched=len(pages))
+            self.update_job_state(job_id, JobState.RUNNING, pages_fetched=len(pages))
             
             if not pages:
                 self.update_job_state(job_id, JobState.FAILED, error="No pages fetched")
@@ -96,7 +106,22 @@ class JobManager:
             # Step 3: Generate embeddings
             logger.info(f"Job {job_id}: Starting embedding phase ({len(chunks)} chunks)")
             texts = [chunk["text"] for chunk in chunks]
-            embeddings = await self.embedding_service.embed_texts(texts)
+            embedding_service = self._get_embedding_service()
+            try:
+                embeddings = await embedding_service.embed_texts(texts)
+            except Exception as e:
+                error_msg = str(e)
+                # Check for quota/rate limit errors
+                if "429" in error_msg or "insufficient_quota" in error_msg.lower() or "rate_limit" in error_msg.lower():
+                    error_detail = "OpenAI API quota exceeded. Please check your API key billing or switch to local embeddings (set EMBEDDING_PROVIDER=local in .env and install sentence-transformers)"
+                elif "no embedding provider" in error_msg.lower() or "sentence-transformers" in error_msg.lower():
+                    error_detail = "No embedding provider available. Install sentence-transformers: pip install sentence-transformers"
+                else:
+                    error_detail = f"Embedding error: {error_msg}"
+                
+                logger.error(f"Job {job_id}: {error_detail}")
+                self.update_job_state(job_id, JobState.FAILED, error=error_detail)
+                return
             
             # Step 4: Index in vector store
             logger.info(f"Job {job_id}: Starting indexing phase")

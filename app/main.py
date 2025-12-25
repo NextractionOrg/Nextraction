@@ -1,11 +1,13 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from app.config import settings
-from app.routers import ingest, status, ask, health
+from app.routers import ingest, status, ask, health, auth
 from app.middleware.rate_limit import RateLimitMiddleware
 from app.utils.logger import logger
 import os
+import traceback
 
 # Create FastAPI app
 app = FastAPI(
@@ -27,6 +29,7 @@ app.add_middleware(
 app.add_middleware(RateLimitMiddleware)
 
 # Include routers
+app.include_router(auth.router)
 app.include_router(ingest.router)
 app.include_router(status.router)
 app.include_router(ask.router)
@@ -64,6 +67,19 @@ async def startup_event():
     logger.info("Application started")
     logger.info(f"Embedding provider: {settings.embedding_provider}")
     logger.info(f"LLM provider: {settings.llm_provider}")
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """Global exception handler to ensure all errors return JSON"""
+    logger.error(f"Unhandled exception: {str(exc)}", exc_info=True)
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": f"Internal server error: {str(exc)}",
+            "type": type(exc).__name__
+        }
+    )
 
 
 @app.on_event("shutdown")

@@ -29,6 +29,9 @@
             border-radius: 10px;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
         
         .header h1 {
@@ -38,6 +41,18 @@
         
         .header p {
             color: #666;
+        }
+        
+        .auth-section {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .user-info {
+            color: #667eea;
+            font-weight: 500;
+            margin-right: 10px;
         }
         
         .card {
@@ -103,6 +118,14 @@
         button:disabled {
             background: #ccc;
             cursor: not-allowed;
+        }
+        
+        button.secondary {
+            background: #6c757d;
+        }
+        
+        button.secondary:hover {
+            background: #5a6268;
         }
         
         .status {
@@ -192,9 +215,80 @@
             gap: 20px;
         }
         
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .tab {
+            padding: 10px 20px;
+            background: #f0f0f0;
+            border: none;
+            border-radius: 6px 6px 0 0;
+            cursor: pointer;
+        }
+        
+        .tab.active {
+            background: white;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .copy-btn {
+            background: #6c757d;
+            color: white;
+            padding: 4px 8px;
+            border: none;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            margin-left: 8px;
+        }
+        
+        .copy-btn:hover {
+            background: #5a6268;
+        }
+        
+        .job-id-display {
+            background: #f8f9fa;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin: 10px 0;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: #667eea;
+            transition: width 0.3s;
+        }
+        
         @media (max-width: 768px) {
             .grid {
                 grid-template-columns: 1fr;
+            }
+            .header {
+                flex-direction: column;
+                align-items: flex-start;
             }
         }
     </style>
@@ -202,14 +296,66 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🚀 NexTraction Web RAG</h1>
-            <p>Pipeline de RAG basé sur le web pour extraire des insights de sources publiques</p>
+            <div>
+                <h1>NexTraction Web RAG</h1>
+                <p>Pipeline de RAG basé sur le web pour extraire des insights de sources publiques</p>
+            </div>
+            <div class="auth-section" id="authSection">
+                <span class="user-info" id="userInfo" style="display: none;"></span>
+                <button class="secondary" onclick="showRegister()" id="registerBtn">S'inscrire</button>
+                <button class="secondary" onclick="showLogin()" id="loginBtn">Se connecter</button>
+                <button class="secondary" onclick="logout()" id="logoutBtn" style="display: none;">Déconnexion</button>
+            </div>
         </div>
         
-        <div class="grid">
+        <!-- Auth Card -->
+        <div class="card" id="authCard">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('login')">Connexion</button>
+                <button class="tab" onclick="switchTab('register')">Inscription</button>
+            </div>
+            
+            <div id="loginTab" class="tab-content active">
+                <h2>Connexion</h2>
+                <form id="loginForm">
+                    <div class="form-group">
+                        <label>Username:</label>
+                        <input type="text" id="loginUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="loginPassword" required>
+                    </div>
+                    <button type="submit">Se connecter</button>
+                </form>
+                <div id="loginStatus"></div>
+            </div>
+            
+            <div id="registerTab" class="tab-content">
+                <h2>Inscription</h2>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label>Username:</label>
+                        <input type="text" id="registerUsername" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Email:</label>
+                        <input type="email" id="registerEmail" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Password:</label>
+                        <input type="password" id="registerPassword" required>
+                    </div>
+                    <button type="submit">S'inscrire</button>
+                </form>
+                <div id="registerStatus"></div>
+            </div>
+        </div>
+        
+        <div class="grid" id="mainContent" style="display: none;">
             <!-- Ingestion Section -->
             <div class="card">
-                <h2>📥 Ingestion</h2>
+                <h2>Ingestion</h2>
                 <form id="ingestForm">
                     <div class="form-group">
                         <label>URLs de départ (une par ligne):</label>
@@ -234,7 +380,7 @@
             
             <!-- Status Section -->
             <div class="card">
-                <h2>📊 Statut du Job</h2>
+                <h2>Statut du Job</h2>
                 <div class="form-group">
                     <label>Job ID:</label>
                     <input type="text" id="jobId" placeholder="Collez le Job ID ici">
@@ -245,8 +391,8 @@
         </div>
         
         <!-- Ask Section -->
-        <div class="card">
-            <h2>❓ Poser une question</h2>
+        <div class="card" id="askCard" style="display: none;">
+            <h2>Poser une question</h2>
             <form id="askForm">
                 <div class="form-group">
                     <label>Job ID:</label>
@@ -264,10 +410,211 @@
     
     <script>
         const API_BASE = window.location.origin;
+        let authToken = localStorage.getItem('authToken');
+        let currentUser = null;
+        
+        // Define functions first (before they're used in onclick handlers)
+        function showLogin() {
+            document.getElementById('authCard').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('askCard').style.display = 'none';
+            switchTab('login');
+        }
+        
+        function showRegister() {
+            document.getElementById('authCard').style.display = 'block';
+            document.getElementById('mainContent').style.display = 'none';
+            document.getElementById('askCard').style.display = 'none';
+            switchTab('register');
+        }
+        
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            localStorage.removeItem('authToken');
+            updateAuthUI();
+        }
+        
+        function switchTab(tab) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            if (tab === 'login') {
+                const loginTab = document.querySelector('.tab');
+                if (loginTab) loginTab.classList.add('active');
+                const loginContent = document.getElementById('loginTab');
+                if (loginContent) loginContent.classList.add('active');
+            } else if (tab === 'register') {
+                const tabs = document.querySelectorAll('.tab');
+                if (tabs.length > 1) tabs[1].classList.add('active');
+                const registerContent = document.getElementById('registerTab');
+                if (registerContent) registerContent.classList.add('active');
+            }
+        }
+        
+        function updateAuthUI() {
+            if (authToken && currentUser) {
+                document.getElementById('userInfo').textContent = `Connecté: ${currentUser.username}`;
+                document.getElementById('userInfo').style.display = 'block';
+                document.getElementById('registerBtn').style.display = 'none';
+                document.getElementById('loginBtn').style.display = 'none';
+                document.getElementById('logoutBtn').style.display = 'block';
+                document.getElementById('authCard').style.display = 'none';
+                document.getElementById('mainContent').style.display = 'grid';
+                document.getElementById('askCard').style.display = 'block';
+            } else {
+                document.getElementById('userInfo').style.display = 'none';
+                document.getElementById('registerBtn').style.display = 'block';
+                document.getElementById('loginBtn').style.display = 'block';
+                document.getElementById('logoutBtn').style.display = 'none';
+            }
+        }
+        
+        function getAuthHeaders() {
+            const headers = { 'Content-Type': 'application/json' };
+            if (authToken) {
+                headers['Authorization'] = `Bearer ${authToken}`;
+            }
+            return headers;
+        }
+        
+        async function checkAuth() {
+            if (!authToken) {
+                return false;
+            }
+            try {
+                const response = await fetch(`${API_BASE}/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                if (response.ok) {
+                    currentUser = await response.json();
+                    updateAuthUI();
+                    return true;
+                } else {
+                    // Token invalid or expired
+                    authToken = null;
+                    currentUser = null;
+                    localStorage.removeItem('authToken');
+                    updateAuthUI();
+                    return false;
+                }
+            } catch (error) {
+                // Network error or other issue - clear token silently
+                // Don't log to console to avoid noise
+                authToken = null;
+                currentUser = null;
+                localStorage.removeItem('authToken');
+                updateAuthUI();
+                return false;
+            }
+        }
+        
+        // Check auth on load
+        window.addEventListener('DOMContentLoaded', () => {
+            if (authToken) {
+                // Try to verify token, but don't show errors if it fails
+                checkAuth().catch(() => {
+                    // Silently handle auth check failure
+                    updateAuthUI();
+                });
+            } else {
+                // Show auth form and hide main content
+                document.getElementById('authCard').style.display = 'block';
+                document.getElementById('mainContent').style.display = 'none';
+                document.getElementById('askCard').style.display = 'none';
+                updateAuthUI();
+            }
+        });
+        
+        // Register
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('registerStatus');
+            statusDiv.innerHTML = '<div class="status loading">Inscription en cours...</div>';
+            
+            try {
+                const response = await fetch(`${API_BASE}/auth/register`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        username: document.getElementById('registerUsername').value,
+                        email: document.getElementById('registerEmail').value,
+                        password: document.getElementById('registerPassword').value
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: `Erreur HTTP ${response.status}` }));
+                    statusDiv.innerHTML = `<div class="status error">Erreur: ${errorData.detail || 'Erreur inconnue'}</div>`;
+                    return;
+                }
+                
+                const data = await response.json();
+                statusDiv.innerHTML = '<div class="status success">Inscription reussie! Vous pouvez maintenant vous connecter.</div>';
+                setTimeout(() => switchTab('login'), 2000);
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">Erreur: ${error.message}</div>`;
+            }
+        });
+        
+        // Login
+        document.getElementById('loginForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusDiv = document.getElementById('loginStatus');
+            statusDiv.innerHTML = '<div class="status loading">Connexion en cours...</div>';
+            
+            try {
+                const formData = new URLSearchParams();
+                formData.append('username', document.getElementById('loginUsername').value);
+                formData.append('password', document.getElementById('loginPassword').value);
+                
+                const response = await fetch(`${API_BASE}/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: `Erreur HTTP ${response.status}` }));
+                    statusDiv.innerHTML = `<div class="status error">Erreur: ${errorData.detail || 'Erreur inconnue'}</div>`;
+                    return;
+                }
+                
+                const data = await response.json();
+                authToken = data.access_token;
+                localStorage.setItem('authToken', authToken);
+                
+                // Get user info
+                try {
+                    const userResponse = await fetch(`${API_BASE}/auth/me`, {
+                        headers: { 'Authorization': `Bearer ${authToken}` }
+                    });
+                    if (userResponse.ok) {
+                        currentUser = await userResponse.json();
+                    } else {
+                        currentUser = { username: document.getElementById('loginUsername').value };
+                    }
+                } catch (err) {
+                    currentUser = { username: document.getElementById('loginUsername').value };
+                }
+                
+                updateAuthUI();
+                statusDiv.innerHTML = '<div class="status success">Connexion reussie!</div>';
+            } catch (error) {
+                statusDiv.innerHTML = `<div class="status error">Erreur: ${error.message}</div>`;
+            }
+        });
         
         // Ingestion
         document.getElementById('ingestForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!authToken) {
+                alert('Veuillez vous connecter d\'abord');
+                showLogin();
+                return;
+            }
+            
             const statusDiv = document.getElementById('ingestStatus');
             statusDiv.innerHTML = '<div class="status loading">Démarrage de l\'ingestion...</div>';
             
@@ -277,7 +624,7 @@
             try {
                 const response = await fetch(`${API_BASE}/ingest`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         seed_urls: seedUrls,
                         domain_allowlist: domainAllowlist,
@@ -286,28 +633,65 @@
                     })
                 });
                 
-                const data = await response.json();
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                let data = null;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        const text = await response.text();
+                        statusDiv.innerHTML = `<div class="status error">Erreur serveur (${response.status}): ${text.substring(0, 200)}</div>`;
+                        return;
+                    }
+                } else {
+                    const text = await response.text();
+                    statusDiv.innerHTML = `<div class="status error">Erreur serveur (${response.status}): ${text.substring(0, 200)}</div>`;
+                    return;
+                }
                 
                 if (response.ok) {
                     statusDiv.innerHTML = `
                         <div class="status success">
-                            <strong>✅ Ingestion démarrée!</strong><br>
-                            Job ID: <code>${data.job_id}</code><br>
+                            <strong>Ingestion démarrée!</strong><br>
+                            <div class="job-id-display">
+                                Job ID: <code>${data.job_id}</code>
+                                <button class="copy-btn" onclick="copyToClipboard('${data.job_id}')">Copier</button>
+                            </div>
                             Pages acceptées: ${data.accepted_pages}
                         </div>
                     `;
                     document.getElementById('jobId').value = data.job_id;
                     document.getElementById('askJobId').value = data.job_id;
+                    
+                    // Start auto-refreshing status
+                    setTimeout(() => {
+                        checkStatus();
+                        startStatusAutoRefresh(data.job_id);
+                    }, 2000);
                 } else {
-                    statusDiv.innerHTML = `<div class="status error">Erreur: ${data.detail || 'Erreur inconnue'}</div>`;
+                    if (response.status === 401 || response.status === 403) {
+                        statusDiv.innerHTML = '<div class="status error">Session expirée. Veuillez vous reconnecter.</div>';
+                        logout();
+                    } else {
+                        const errorMsg = data?.detail || data?.message || `Erreur HTTP ${response.status}`;
+                        statusDiv.innerHTML = `<div class="status error">Erreur: ${errorMsg}</div>`;
+                    }
                 }
             } catch (error) {
-                statusDiv.innerHTML = `<div class="status error">Erreur: ${error.message}</div>`;
+                statusDiv.innerHTML = `<div class="status error">Erreur réseau: ${error.message}</div>`;
             }
         });
         
         // Check Status
         async function checkStatus() {
+            if (!authToken) {
+                alert('Veuillez vous connecter d\'abord');
+                showLogin();
+                return;
+            }
+            
             const jobId = document.getElementById('jobId').value;
             if (!jobId) {
                 document.getElementById('statusResult').innerHTML = '<div class="status error">Veuillez entrer un Job ID</div>';
@@ -318,8 +702,27 @@
             resultDiv.innerHTML = '<div class="status loading">Vérification...</div>';
             
             try {
-                const response = await fetch(`${API_BASE}/status/${jobId}`);
-                const data = await response.json();
+                const response = await fetch(`${API_BASE}/status/${jobId}`, {
+                    headers: getAuthHeaders()
+                });
+                
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                let data = null;
+                
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        const text = await response.text();
+                        resultDiv.innerHTML = `<div class="status error">Erreur serveur (${response.status}): ${text.substring(0, 200)}</div>`;
+                        return;
+                    }
+                } else {
+                    const text = await response.text();
+                    resultDiv.innerHTML = `<div class="status error">Erreur serveur (${response.status}): ${text.substring(0, 200)}</div>`;
+                    return;
+                }
                 
                 if (response.ok) {
                     const stateColors = {
@@ -329,74 +732,164 @@
                         'failed': 'error'
                     };
                     
+                    let progressHtml = '';
+                    if (data.state === 'running' && data.pages_fetched > 0) {
+                        const progress = Math.min(100, (data.pages_indexed / Math.max(data.pages_fetched, 1)) * 100);
+                        progressHtml = `
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: ${progress}%"></div>
+                            </div>
+                            <small>Progression: ${Math.round(progress)}%</small>
+                        `;
+                    }
+                    
                     resultDiv.innerHTML = `
                         <div class="status ${stateColors[data.state] || 'info'}">
                             <strong>État:</strong> ${data.state}<br>
                             <strong>Pages récupérées:</strong> ${data.pages_fetched}<br>
                             <strong>Pages indexées:</strong> ${data.pages_indexed}<br>
+                            ${progressHtml}
                             ${data.error ? `<strong>Erreur:</strong> ${data.error}` : ''}
                         </div>
                     `;
+                    
+                    // Auto-refresh if running
+                    if (data.state === 'running') {
+                        startStatusAutoRefresh(jobId);
+                    } else {
+                        stopStatusAutoRefresh();
+                    }
                 } else {
-                    resultDiv.innerHTML = `<div class="status error">Erreur: ${data.detail || 'Job non trouvé'}</div>`;
+                    if (response.status === 401 || response.status === 403) {
+                        resultDiv.innerHTML = '<div class="status error">Session expirée. Veuillez vous reconnecter.</div>';
+                        logout();
+                    } else {
+                        resultDiv.innerHTML = `<div class="status error">Erreur: ${data.detail || 'Job non trouvé'}</div>`;
+                    }
                 }
             } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">Erreur: ${error.message}</div>`;
+                resultDiv.innerHTML = `<div class="status error">Erreur réseau: ${error.message}</div>`;
             }
         }
         
         // Ask Question
         document.getElementById('askForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            if (!authToken) {
+                alert('Veuillez vous connecter d\'abord');
+                showLogin();
+                return;
+            }
+            
             const resultDiv = document.getElementById('answerResult');
             resultDiv.innerHTML = '<div class="status loading">Génération de la réponse...</div>';
             
             try {
                 const response = await fetch(`${API_BASE}/ask`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    headers: getAuthHeaders(),
                     body: JSON.stringify({
                         job_id: document.getElementById('askJobId').value,
                         question: document.getElementById('question').value
                     })
                 });
                 
-                const data = await response.json();
+                // Check if response is JSON
+                const contentType = response.headers.get('content-type');
+                let data = null;
                 
-                if (response.ok) {
-                    const confidenceClass = `confidence-${data.confidence}`;
-                    let citationsHtml = '';
-                    
-                    if (data.citations && data.citations.length > 0) {
-                        citationsHtml = '<h3 style="margin-top: 20px; margin-bottom: 10px;">📚 Citations:</h3>';
-                        data.citations.forEach((citation, idx) => {
-                            citationsHtml += `
-                                <div class="citation">
-                                    <h4>${idx + 1}. ${citation.title}</h4>
-                                    <p><strong>URL:</strong> <a href="${citation.url}" target="_blank">${citation.url}</a></p>
-                                    <p><strong>Score:</strong> ${citation.score.toFixed(3)}</p>
-                                    <p class="quote">"${citation.quote}"</p>
-                                </div>
-                            `;
-                        });
+                if (contentType && contentType.includes('application/json')) {
+                    try {
+                        data = await response.json();
+                    } catch (jsonError) {
+                        const text = await response.text();
+                        resultDiv.innerHTML = `<div class="status error">Erreur serveur (${response.status}): ${text.substring(0, 200)}</div>`;
+                        return;
                     }
-                    
-                    resultDiv.innerHTML = `
-                        <div class="answer-box">
-                            <h3>Réponse <span class="confidence-badge ${confidenceClass}">${data.confidence}</span></h3>
-                            <p style="margin-top: 10px; line-height: 1.6;">${data.answer}</p>
-                            <p style="margin-top: 15px; font-size: 0.9em; color: #666;"><strong>Notes:</strong> ${data.groundingnotes}</p>
-                            ${citationsHtml}
-                        </div>
-                    `;
                 } else {
-                    resultDiv.innerHTML = `<div class="status error">Erreur: ${data.detail || 'Erreur inconnue'}</div>`;
+                    const text = await response.text();
+                    resultDiv.innerHTML = `<div class="status error">Erreur serveur (${response.status}): ${text.substring(0, 200)}</div>`;
+                    return;
                 }
+                
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        resultDiv.innerHTML = '<div class="status error">Session expirée. Veuillez vous reconnecter.</div>';
+                        logout();
+                    } else {
+                        const errorMsg = data?.detail || data?.message || `Erreur HTTP ${response.status}`;
+                        resultDiv.innerHTML = `<div class="status error">Erreur: ${errorMsg}</div>`;
+                    }
+                    return;
+                }
+                const confidenceClass = `confidence-${data.confidence}`;
+                let citationsHtml = '';
+                
+                if (data.citations && data.citations.length > 0) {
+                    citationsHtml = '<h3 style="margin-top: 20px; margin-bottom: 10px;">Citations:</h3>';
+                    data.citations.forEach((citation, idx) => {
+                        citationsHtml += `
+                            <div class="citation">
+                                <h4>${idx + 1}. ${citation.title}</h4>
+                                <p><strong>URL:</strong> <a href="${citation.url}" target="_blank">${citation.url}</a></p>
+                                <p><strong>Score:</strong> ${citation.score.toFixed(3)}</p>
+                                <p class="quote">"${citation.quote}"</p>
+                            </div>
+                        `;
+                    });
+                }
+                
+                resultDiv.innerHTML = `
+                    <div class="answer-box">
+                        <h3>Réponse <span class="confidence-badge ${confidenceClass}">${data.confidence}</span></h3>
+                        <p style="margin-top: 10px; line-height: 1.6;">${data.answer}</p>
+                        <p style="margin-top: 15px; font-size: 0.9em; color: #666;"><strong>Notes:</strong> ${data.groundingnotes}</p>
+                        ${citationsHtml}
+                    </div>
+                `;
             } catch (error) {
-                resultDiv.innerHTML = `<div class="status error">Erreur: ${error.message}</div>`;
+                console.error('Error:', error);
+                let errorMsg = 'Erreur lors de la requête';
+                if (error.message) {
+                    errorMsg = error.message;
+                }
+                resultDiv.innerHTML = `<div class="status error">Erreur: ${errorMsg}</div>`;
             }
         });
+        
+        // Utility function to copy to clipboard
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Job ID copié dans le presse-papiers!');
+            }).catch(err => {
+                console.error('Failed to copy:', err);
+            });
+        }
+        
+        // Auto-refresh status if job is running
+        let statusCheckInterval = null;
+        function startStatusAutoRefresh(jobId) {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+            }
+            statusCheckInterval = setInterval(() => {
+                if (document.getElementById('jobId').value === jobId) {
+                    checkStatus();
+                } else {
+                    clearInterval(statusCheckInterval);
+                    statusCheckInterval = null;
+                }
+            }, 3000); // Check every 3 seconds
+        }
+        
+        // Stop auto-refresh when job is done
+        function stopStatusAutoRefresh() {
+            if (statusCheckInterval) {
+                clearInterval(statusCheckInterval);
+                statusCheckInterval = null;
+            }
+        }
+        
     </script>
 </body>
 </html>
-
