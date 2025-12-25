@@ -9,9 +9,10 @@ from app.auth.models import User, UserCreate, UserResponse, Token, TokenData
 from app.utils.logger import logger
 
 # Get JWT settings from config
-JWT_SECRET_KEY = settings.jwt_secret_key or os.getenv("JWT_SECRET_KEY", secrets.token_urlsafe(32))
-JWT_ALGORITHM = settings.jwt_algorithm
-JWT_EXPIRATION_HOURS = settings.jwt_expiration_hours
+# Use getattr to safely access settings attributes with fallback
+JWT_SECRET_KEY = getattr(settings, 'jwt_secret_key', None) or os.getenv("JWT_SECRET_KEY") or secrets.token_urlsafe(32)
+JWT_ALGORITHM = getattr(settings, 'jwt_algorithm', 'HS256')
+JWT_EXPIRATION_HOURS = getattr(settings, 'jwt_expiration_hours', 24)
 
 # In-memory user storage (replace with database in production)
 users_db: dict[str, User] = {}
@@ -19,7 +20,7 @@ users_db: dict[str, User] = {}
 
 def hash_password(password: str) -> str:
     """Hash a password using SHA-256 with salt"""
-    salt = settings.password_salt or os.getenv("PASSWORD_SALT", "default_salt_change_in_production")
+    salt = getattr(settings, 'password_salt', None) or os.getenv("PASSWORD_SALT") or secrets.token_urlsafe(16)
     return hashlib.sha256((password + salt).encode()).hexdigest()
 
 

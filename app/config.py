@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # Rate Limiting
     rate_limit_per_minute: int = 60
     
+    # Authentication
+    jwt_secret_key: Optional[str] = None
+    jwt_algorithm: str = "HS256"
+    jwt_expiration_hours: int = 24
+    password_salt: Optional[str] = None
+    
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
