@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Git
+.git/
+.gitignore
+
+# Documentation
+*.md
+docs/
+DEPLOY*.md
+*.md
+
+# Tests
+tests/
+pytest.ini
+.pytest_cache/
+
+# Data (will be mounted as volume)
+data/
+*.json
+*.faiss
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Docker
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# Scripts
+scripts/
+*.sh
+
+# Deployment configs
+deployment/
+render.yaml
+railway.json
+Procfile
+
+# OS
+.DS_Store
+Thumbs.db
+

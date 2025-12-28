@@ -56,6 +56,19 @@ async def root():
     }
 
 
+@app.get("/presentation")
+async def presentation():
+    """Présentation interactive de NexTraction"""
+    presentation_path = os.path.join(os.path.dirname(__file__), "static", "presentation.html")
+    if os.path.exists(presentation_path):
+        from fastapi.responses import FileResponse
+        return FileResponse(presentation_path)
+    return {
+        "error": "Presentation not found",
+        "message": "La page de présentation n'est pas disponible"
+    }
+
+
 @app.on_event("startup")
 async def startup_event():
     """Initialize on startup"""
