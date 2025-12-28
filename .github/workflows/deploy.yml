@@ -24,11 +24,11 @@ jobs:
 
       - name: Build Docker image
         run: |
-          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/nextraction:latest .
+          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/nextraction:v1 .
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/nextraction:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/nextraction:v1
 
       - name: Deploy container
         run: |
@@ -39,4 +39,4 @@ jobs:
             --name nextraction-app \
             -e PORT=8000 \
             -p 8000:8000 \
-            ${{ secrets.DOCKER_USERNAME }}/nextraction:latest
+            ${{ secrets.DOCKER_USERNAME }}/nextraction:v1
