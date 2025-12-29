@@ -14,7 +14,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Docker
+      - name: Check Docker
         run: docker --version
 
       - name: Login to Docker Hub
@@ -22,13 +22,33 @@ jobs:
           echo "${{ secrets.DOCKER_PASSWORD }}" | docker login \
             -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
+      # 🔹 Determine next LOCAL image tag (v1 → v2 → v3 ...)
+      - name: Determine next local image tag
+        run: |
+          IMAGE="${{ secrets.DOCKER_USERNAME }}/nextraction"
+
+          LAST_TAG=$(docker images "$IMAGE" --format "{{.Tag}}" \
+            | grep -E '^v[0-9]+$' \
+            | sed 's/v//' \
+            | sort -n \
+            | tail -1)
+
+          if [ -z "$LAST_TAG" ]; then
+            NEXT_TAG="v1"
+          else
+            NEXT_TAG="v$((LAST_TAG + 1))"
+          fi
+
+          echo "Using image tag: $NEXT_TAG"
+          echo "TAG=$NEXT_TAG" >> $GITHUB_ENV
+
       - name: Build Docker image
         run: |
-          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/nextraction:v1 .
+          docker build --no-cache -t ${{ secrets.DOCKER_USERNAME }}/nextraction:${{ env.TAG }} .
 
       - name: Push Docker image
         run: |
-          docker push ${{ secrets.DOCKER_USERNAME }}/nextraction:v1
+          docker push ${{ secrets.DOCKER_USERNAME }}/nextraction:${{ env.TAG }}
 
       - name: Deploy container
         run: |
@@ -37,7 +57,8 @@ jobs:
 
           docker run -d \
             --name nextraction-app \
+            --restart unless-stopped \
             -e PORT=8000 \
             -p 8000:8000 \
             --env-file /home/ubuntu/nextraction.env \
-            ${{ secrets.DOCKER_USERNAME }}/nextraction:v1
+            ${{ secrets.DOCKER_USERNAME }}/nextraction:${{ env.TAG }}
