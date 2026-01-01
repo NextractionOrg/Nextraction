@@ -2,13 +2,10 @@ name: Nextraction Backend
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - main
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted
+    runs-on: [self-hosted, oracle]
 
     steps:
       - name: Checkout code
